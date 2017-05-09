@@ -52,7 +52,7 @@ export class TerminalWidget extends Widget implements Disposable {
     }
 
     protected registerResize() {
-        let initialGeometry = (this.term as any).proposeGeometry()
+        const initialGeometry = (this.term as any).proposeGeometry()
         this.cols = initialGeometry.cols;
         this.rows = initialGeometry.rows;
 
@@ -62,17 +62,17 @@ export class TerminalWidget extends Widget implements Disposable {
             }
             this.cols = size.cols
             this.rows = size.rows
-            let url = '/terminals/' + this.pid + '/size?cols=' + this.cols + '&rows=' + this.rows;
+            const url = this.createUrl('/terminals/' + this.pid + '/size?cols=' + this.cols + '&rows=' + this.rows);
             fetch(url, { method: 'POST' })
         });
         (this.term as any).fit()
     }
 
     protected startNewTerminal() {
-        fetch('/terminals?cols=' + this.cols + '&rows=' + this.rows, { method: 'POST' }).then((res) => {
+        fetch(this.createUrl('/terminals?cols=' + this.cols + '&rows=' + this.rows), { method: 'POST' }).then((res) => {
             res.text().then((pid: string) => {
                 this.pid = pid;
-                let socket = this.createWebSocket(pid);
+                const socket = this.createWebSocket(pid);
                 socket.onopen = () => {
                     (this.term as any).attach(socket);
                     (this.term as any)._initialized = true
@@ -126,9 +126,14 @@ export class TerminalWidget extends Widget implements Disposable {
     }
 
     private doResize() {
-        let geo = (this.term as any).proposeGeometry()
+        const geo = (this.term as any).proposeGeometry()
         this.cols = geo.cols
         this.rows = geo.rows - 1 // subtract one row for margin
         this.term.resize(this.cols, this.rows)
+    }
+
+    private createUrl(path: string) {
+        const protocol = location.protocol === 'https:' ? 'https:' : 'http:';
+        return `${protocol}//${location.host || "127.0.0.1:3000"}${path}`;
     }
 }
