@@ -85,3 +85,7 @@ To build and run the electron example:
       && npm install \
       && npm run build \
       && npm run start
+
+# How to watch for changes
+
+When doing a code change, it is usually necessary to run some commands to rebuild the project.

@@ -25,6 +25,9 @@
     "start:backend": "node ./lib/backend/main.js",
     "start:frontend": "webpack-dev-server --open",
     "cold:start": "npm run clean && npm run build && npm start",
+    
+    "watch": "",
+    
     "watch:backend": "tsc --watch",
     "watch:frontend": "npm run build:frontend && webpack --watch",
     "watch:dependencies": "node ../../config/file-dependency-updater/index.js",
