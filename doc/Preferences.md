@@ -1,23 +1,25 @@
+# Preferences internals
+
 Theia has a preference service which allows modules to get preference values,
 contribute default preferences and listen for preference changes.
 
 Preferences can be saved in the root of the workspace under `.theia/prefs.json`
-or under `$HOME/.theia/prefs.json`
+or in the users' home directory under `$HOME/.theia/prefs.json`
 
-As of right now the files must contain a valid a JSON containing the names and
-values of preferences i.e (note that the following preference names are not
-official and only used as an example)
+As of right now, the files must contain a valid JSON object containing the
+names and values of preferences i.e. (note that the following preference names
+are not official and only used as an example):
 
 ```json
 {
-  "monaco.lineNumbers": "off",
-  "monaco.tabWidth": 4,
-  "fs.watcherExcludes": "path/to/file"
+    "monaco.lineNumbers": "off",
+    "monaco.tabWidth": 4,
+    "fs.watcherExcludes": "path/to/file"
 }
 ```
 
 Let's take the filesystem as an example of a module using the preference
-service
+service.
 
 ## Contributing default preferences as a module with inversify
 
@@ -39,17 +41,18 @@ export interface PreferenceContribution {
 }
 ```
 
-For instance, the filesystem binds it like so : 
+For instance, the filesystem binds it like so:
+
 ```typescript
-    bind(PreferenceContribution).toConstantValue({
-        preferences: [{
-            name: 'files.watcherExclude',
-            defaultValue: defaultFileSystemConfiguration['files.watcherExclude'],
-            description: "Configure glob patterns of file paths to exclude from file watching."
-        }]
-    });
-    
-    export const defaultFileSystemConfiguration: FileSystemConfiguration = {
+bind(PreferenceContribution).toConstantValue({
+    preferences: [{
+        name: 'files.watcherExclude',
+        defaultValue: defaultFileSystemConfiguration['files.watcherExclude'],
+        description: "Configure glob patterns of file paths to exclude from file watching."
+    }]
+});
+
+export const defaultFileSystemConfiguration: FileSystemConfiguration = {
     'files.watcherExclude': {
         "**/.git/objects/**": true,
         "**/.git/subtree-cache/**": true,
@@ -61,25 +64,23 @@ For instance, the filesystem binds it like so :
 ## Listening for a preference change via a configuration
 
 To use the value of a preference, simply get the injected PreferenceService
-from the container
+from the container:
 
 ```typescript
 const preferences = ctx.container.get(PreferenceService);
 ```
 
 In the case of the filesystem, the service is fetched at the beginning for the
-bindings
-
-There, you can use the onPreferenceChanged method to register a pref changed
-callback.
+bindings.  There, you can use the onPreferenceChanged method to register a pref
+changed callback.
 
 ```typescript
 
-	constructor(@inject(PreferenceService) protected readonly prefService: PreferenceService
+    constructor(@inject(PreferenceService) protected readonly prefService: PreferenceService
 	prefService.onPreferenceChanged(e => { ... }
 ```
 
-where the event received is like this
+where the event received is like this:
 
 ```typescript
 export interface PreferenceChangedEvent {
@@ -134,9 +135,9 @@ that module. As said above, a module could also choose to listen to all
 preference changes, but it's more efficient to only inject the specific proxies
 needed for one's preferences.
 
-To use that proxy, simply bind it to a new type X =
-PreferenceProxy<CONFIGURATION_INTERFACE> and then bind(X) to a proxy using the
-method above.
+To use that proxy, simply bind it to a new type
+`X = PreferenceProxy<CONFIGURATION_INTERFACE>` and then `bind(X)` to a proxy
+using the method above.
 
 ```typescript
 export interface FileSystemConfiguration {
@@ -185,31 +186,35 @@ constructor(...,
 ## Preference flow when modifying a preference
 
 As of right now, when a settings.json is modified either in the
-${workspace}/.theia/ or in the ${USER_HOME}/.theia/, this will trigger an event
-from the JSON preference server. Currently, there's a CompoundPreferenceServer
-that manages the different servers (scopes) like workspace/user/defaults
-(provided via the contributions above). Next, the PreferenceService manages
-this server and adds a more convenient api on top of it (i.e getBoolean,
-getString etc.). It also allows clients to registers for preference changes.
-This PreferenceService can then be used either directly via injection in the
-modules, or via a more specific proxy (like the filesystem configuration from
-above).
+`${workspace}/.theia/` or in the `${USER_HOME}/.theia/`, this will trigger an
+event from the JSON preference server. Currently, there's a
+`CompoundPreferenceServer` that manages the different servers (scopes) like
+workspace/user/defaults (provided via the contributions above). Next, the
+`PreferenceService` manages this server and adds a more convenient API on top
+of it (i.e getBoolean, getString etc.). It also allows clients to register for
+preference changes.  This `PreferenceService` can then be used either directly
+via injection in the modules, or via a more specific proxy (like the filesystem
+configuration from above).
 
 In the case of the preference file being modified, the flow would then be:
 
-.theia/settings.json -> JsonPreferenceServer -> CompoundPreferenceServer -> PreferenceService -> PreferenceProxy<FileSystemConfiguration> -> FileSystemWatcher
+```
+.theia/settings.json -> JsonPreferenceServer -> CompoundPreferenceServer ->
+    PreferenceService -> PreferenceProxy<FileSystemConfiguration> ->
+    FileSystemWatcher
+```
 
 ## Fetching the value of a preference
 
 In the case of the filesystem, one would use the same proxied config as above
-to access the preferences i.e:
+to access the preferences:
 
 ```typescript
 preferences['files.watcherExclude'].then(pref => {...});
 ```
 
-This works because, as we have seen it above, the proxy will simply call
-prefService.get('files.watcherExclude').
+This works because, as we have seen above, the proxy will simply call
+`prefService.get('files.watcherExclude')`.
 
 ## TODO/FIXME for preferences
 * Add comments to different settings.json
