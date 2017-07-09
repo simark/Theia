@@ -1,22 +1,28 @@
-Theia has a preference service which allows modules to get preference values, contribute default preferences and listen for preference changes.
+Theia has a preference service which allows modules to get preference values,
+contribute default preferences and listen for preference changes.
 
-Preferences can be saved in the root of the workspace under `.theia/prefs.json` or under `$HOME/.theia/prefs.json`
+Preferences can be saved in the root of the workspace under `.theia/prefs.json`
+or under `$HOME/.theia/prefs.json`
 
-As of right now the files must contain a valid a JSON containing the names and values of preferences i.e (note that the following preference names are not official and only used as an example)
+As of right now the files must contain a valid a JSON containing the names and
+values of preferences i.e (note that the following preference names are not
+official and only used as an example)
 
 ```json
 {
-	"monaco.lineNumbers": "off",
-	"monaco.tabWidth": 4,
-	"fs.watcherExcludes": "path/to/file"
+  "monaco.lineNumbers": "off",
+  "monaco.tabWidth": 4,
+  "fs.watcherExcludes": "path/to/file"
 }
 ```
 
-Let's take the filesystem as an example of a module using the preference service
+Let's take the filesystem as an example of a module using the preference
+service
 
 ## Contributing default preferences as a module with inversify
 
-To contribute some preference values, a module must bind the following PreferenceContribution to a value:
+To contribute some preference values, a module must bind the following
+PreferenceContribution to a value:
 
 ```typescript
 export interface Preference {
@@ -54,14 +60,18 @@ For instance, the filesystem binds it like so :
 
 ## Listening for a preference change via a configuration
 
-To use the value of a preference, simply get the injected PreferenceService from the container
+To use the value of a preference, simply get the injected PreferenceService
+from the container
+
 ```typescript
 const preferences = ctx.container.get(PreferenceService);
 ```
 
-In the case of the filesystem, the service is fetched at the beginning for the bindings
+In the case of the filesystem, the service is fetched at the beginning for the
+bindings
 
-There, you can use the onPreferenceChanged method to register a pref changed callback.
+There, you can use the onPreferenceChanged method to register a pref changed
+callback.
 
 ```typescript
 
@@ -79,7 +89,15 @@ export interface PreferenceChangedEvent {
 }
 ```
 
-Although this can be used directly in the needed class, the filesystem provides a proxy preference service specific to the filesystem preferences (which uses the preference service in the background). This allows for quicker search for the preference (as you search for the preference in the filesystem preference service, and not all preferences via the more generic preference service). It's also more efficient as only the modules watching for specific preferences related to a module will get  To do so, there is a proxy interface for the filesystem configuration that is bound like so using the preference proxy interface:
+Although this can be used directly in the needed class, the filesystem provides
+a proxy preference service specific to the filesystem preferences (which uses
+the preference service in the background). This allows for quicker search for
+the preference (as you search for the preference in the filesystem preference
+service, and not all preferences via the more generic preference service). It's
+also more efficient as only the modules watching for specific preferences
+related to a module will get  To do so, there is a proxy interface for the
+filesystem configuration that is bound like so using the preference proxy
+interface:
 
 ```typescript
 export type PreferenceProxy<T> = Readonly<Deferred<T>> & Disposable & PreferenceEventEmitter<T>;
@@ -108,9 +126,17 @@ export function createPreferenceProxy<T extends Configuration>(preferences: Pref
     })
 }
 ```
-As seen above, the proxy will only fire events to the listeners that listen to that specific module configuration. This way, not all filesystem preferences users have to listen to all the preference changes, but only those that affect that module. As said above, a module could also choose to listen to all preference changes, but it's more efficient to only inject the specific proxies needed for one's preferences.
 
-To use that proxy, simply bind it to a new type X = PreferenceProxy<CONFIGURATION_INTERFACE> and then bind(X) to a proxy using the method above.
+As seen above, the proxy will only fire events to the listeners that listen to
+that specific module configuration. This way, not all filesystem preferences
+users have to listen to all the preference changes, but only those that affect
+that module. As said above, a module could also choose to listen to all
+preference changes, but it's more efficient to only inject the specific proxies
+needed for one's preferences.
+
+To use that proxy, simply bind it to a new type X =
+PreferenceProxy<CONFIGURATION_INTERFACE> and then bind(X) to a proxy using the
+method above.
 
 ```typescript
 export interface FileSystemConfiguration {
@@ -140,8 +166,8 @@ export function bindFileSystemPreferences(bind: interfaces.Bind): void {
 }
 ```
 
-Finally, to use the filesystem configuration in your module. Simply inject it where you need it (in the filesystem watcher in this example):
-
+Finally, to use the filesystem configuration in your module. Simply inject it
+where you need it (in the filesystem watcher in this example):
 
 ```typescript
 constructor(...,
@@ -158,7 +184,16 @@ constructor(...,
 
 ## Preference flow when modifying a preference
 
-As of right now, when a settings.json is modified either in the ${workspace}/.theia/ or in the ${USER_HOME}/.theia/, this will trigger an event from the JSON preference server. Currently, there's a CompoundPreferenceServer that manages the different servers (scopes) like workspace/user/defaults (provided via the contributions above). Next, the PreferenceService manages this server and adds a more convenient api on top of it (i.e getBoolean, getString etc.). It also allows clients to registers for preference changes. This PreferenceService can then be used either directly via injection in the modules, or via a more specific proxy (like the filesystem configuration from above).
+As of right now, when a settings.json is modified either in the
+${workspace}/.theia/ or in the ${USER_HOME}/.theia/, this will trigger an event
+from the JSON preference server. Currently, there's a CompoundPreferenceServer
+that manages the different servers (scopes) like workspace/user/defaults
+(provided via the contributions above). Next, the PreferenceService manages
+this server and adds a more convenient api on top of it (i.e getBoolean,
+getString etc.). It also allows clients to registers for preference changes.
+This PreferenceService can then be used either directly via injection in the
+modules, or via a more specific proxy (like the filesystem configuration from
+above).
 
 In the case of the preference file being modified, the flow would then be:
 
@@ -166,13 +201,15 @@ In the case of the preference file being modified, the flow would then be:
 
 ## Fetching the value of a preference
 
-In the case of the filesystem, one would use the same proxied config as above to access the preferences i.e:
+In the case of the filesystem, one would use the same proxied config as above
+to access the preferences i.e:
 
 ```typescript
 preferences['files.watcherExclude'].then(pref => {...});
 ```
 
-This works because, as we have seen it above, the proxy will simply call prefService.get('files.watcherExclude').
+This works because, as we have seen it above, the proxy will simply call
+prefService.get('files.watcherExclude').
 
 ## TODO/FIXME for preferences
 * Add comments to different settings.json
