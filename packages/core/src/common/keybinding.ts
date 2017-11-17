@@ -54,45 +54,6 @@ export namespace KeybindingContexts {
 }
 
 @injectable()
-export class KeybindingContextRegistry {
-
-    protected readonly contexts: { [id: string]: KeybindingContext } = {};
-
-    constructor(
-        @inject(ContributionProvider) @named(KeybindingContext)
-        protected readonly contextProvider: ContributionProvider<KeybindingContext>
-    ) {
-        this.registerContext(KeybindingContexts.NOOP_CONTEXT);
-        this.registerContext(KeybindingContexts.DEFAULT_CONTEXT);
-    }
-
-    initialize(): void {
-        this.contextProvider.getContributions().forEach(context => this.registerContext(context));
-    }
-
-    /**
-     * Registers the keybinding context arguments into the application. Fails when an already registered
-     * context is being registered.
-     *
-     * @param contexts the keybinding contexts to register into the application.
-     */
-    registerContext(...contexts: KeybindingContext[]) {
-        for (const context of contexts) {
-            const { id } = context;
-            if (this.contexts[id]) {
-                throw new Error(`A keybinding context with ID ${id} is already registered.`);
-            }
-            this.contexts[id] = context;
-        }
-    }
-
-    getContext(contextId: string): KeybindingContext | undefined {
-        return this.contexts[contextId];
-    }
-
-}
-
-@injectable()
 export class KeybindingRegistry {
 
     protected readonly keybindings: { [index: string]: Keybinding[] } = {};
@@ -100,7 +61,6 @@ export class KeybindingRegistry {
 
     constructor(
         @inject(CommandRegistry) protected readonly commandRegistry: CommandRegistry,
-        @inject(KeybindingContextRegistry) protected readonly contextRegistry: KeybindingContextRegistry,
         @inject(ContributionProvider) @named(KeybindingContribution)
         protected readonly contributions: ContributionProvider<KeybindingContribution>,
         @inject(ILogger) protected readonly logger: ILogger

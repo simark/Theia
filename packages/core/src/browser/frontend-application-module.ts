@@ -12,7 +12,7 @@ import {
     ResourceProvider, ResourceResolver, DefaultResourceProvider,
     CommandContribution, CommandRegistry, CommandService,
     MenuModelRegistry, MenuContribution,
-    KeybindingContextRegistry, KeybindingRegistry,
+    KeybindingRegistry,
     KeybindingContext,
     KeybindingContribution,
     MessageService
@@ -71,7 +71,6 @@ export const frontendApplicationModule = new ContainerModule((bind, unbind, isBo
     bind(KeybindingRegistry).toSelf().inSingletonScope();
     bindContributionProvider(bind, KeybindingContribution);
 
-    bind(KeybindingContextRegistry).toSelf().inSingletonScope();
     bindContributionProvider(bind, KeybindingContext);
 
     bind(HumaneMessageClient).toSelf().inSingletonScope();
