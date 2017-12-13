@@ -38,6 +38,10 @@ export interface LabelProviderContribution {
      */
     getLongName?(element: object): string;
 
+    /**
+     * returns a directory name for the given element.
+     */
+    getDirectoryName?(element: object): string;
 }
 
 @injectable()
@@ -71,6 +75,10 @@ export class DefaultUriLabelProviderContribution implements LabelProviderContrib
     }
 
     getLongName(uri: URI): string {
+        return uri.path.toString();
+    }
+
+    getDirectoryName(uri: URI): string {
         return uri.parent.path.toString();
     }
 }
@@ -108,6 +116,15 @@ export class LabelProvider {
             return "";
         }
         return contrib!.getLongName!(element);
+    }
+
+    getDirectoryName(element: object): string {
+        const contribs = this.findContribution(element);
+        const contrib = contribs.find(c => c.getDirectoryName !== undefined);
+        if (!contrib) {
+            return "";
+        }
+        return contrib!.getDirectoryName!(element);
     }
 
     protected findContribution(element: object): LabelProviderContribution[] {

@@ -87,4 +87,10 @@ export class WorkspaceUriLabelProviderContribution extends DefaultUriLabelProvid
         }
         return short;
     }
+
+    getDirectoryName(element: URI | FileStat): string {
+        const uri = this.getUri(element).parent;
+
+        return this.getLongName(uri);
+    }
 }
