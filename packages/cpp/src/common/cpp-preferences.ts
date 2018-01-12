@@ -14,7 +14,7 @@ import {
     PreferenceSchema
 } from '@theia/preferences/lib/common';
 
-export const CLANGD_COMMAND_DEFAULT = 'clangd';
+export const CLANGD_COMMAND_DEFAULT = '/home/emaisin/src/cquery/build/release/bin/cquery';
 
 export const CppConfigSchema: PreferenceSchema = {
     "type": "object",

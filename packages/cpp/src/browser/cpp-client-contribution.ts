@@ -6,7 +6,7 @@
  */
 
 import { injectable } from "inversify";
-import { BaseLanguageClientContribution } from '@theia/languages/lib/browser';
+import { BaseLanguageClientContribution, LanguageClientOptions } from '@theia/languages/lib/browser';
 import { CPP_LANGUAGE_ID, CPP_LANGUAGE_NAME } from '../common';
 
 @injectable()
@@ -25,6 +25,18 @@ export class CppClientContribution extends BaseLanguageClientContribution {
         return [
             '**/*.h', '**/*.hxx', '**/*.hh', '**/*.hpp', '**/*.inc', '**/*.c', '**/*.cxx', '**/*.C', '**/*.c++', '**/*.cc', '**/*.cc', '**/*.cpp'
         ];
+    }
+
+    protected createOptions(): LanguageClientOptions {
+        const opts = super.createOptions();
+
+        const initOpts = {
+            cacheDirectory: '/tmp/cquery-cache'
+        };
+
+        opts.initializationOptions = initOpts;
+
+        return opts;
     }
 
 }

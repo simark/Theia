@@ -8,7 +8,7 @@
 import { injectable, inject } from "inversify";
 import { BaseLanguageServerContribution, IConnection } from "@theia/languages/lib/node";
 import { CPP_LANGUAGE_ID, CPP_LANGUAGE_NAME } from '../common';
-import { CppPreferences, CLANGD_COMMAND_DEFAULT } from "../common";
+import { CppPreferences } from "../common";
 import { Message, isRequestMessage } from 'vscode-ws-jsonrpc';
 import { InitializeParams, InitializeRequest } from 'vscode-languageserver-protocol';
 
@@ -39,13 +39,13 @@ export class CppContribution extends BaseLanguageServerContribution {
     }
 
     public start(clientConnection: IConnection): void {
-        const command = this.cppPreferences['cpp.clangdCommand'] === '' ? CLANGD_COMMAND_DEFAULT : this.cppPreferences['cpp.clangdCommand'];
+        const command = "/home/emaisin/src/cquery/build/debug/bin/cquery";
 
-        const args: string[] = this.cppPreferences['cpp.clangdCommandArgs'];
-        if (this.cppPreferences['cpp.clangdCompilationDatabaseDirectory'] !== '') {
-            args.push("-compile-commands-dir=" + this.cppPreferences['cpp.clangdCompilationDatabaseDirectory']);
-        }
-        const serverConnection = this.createProcessStreamConnection(command, args);
+        const args: string[] = ['--language-server', '--log-stdin-stdout-to-stderr'];
+
+        const serverConnection = this.createProcessStreamConnection(command, args, {
+            cwd: '/home/emaisin/src/binutils-gdb',
+        });
         this.forward(clientConnection, serverConnection);
     }
 
