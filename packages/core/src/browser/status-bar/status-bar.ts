@@ -11,6 +11,7 @@ import { h } from '@phosphor/virtualdom';
 import { LabelParser, LabelIcon } from '../label-parser';
 import { injectable, inject } from 'inversify';
 import { Deferred } from '../../common/promise-util';
+import { FrontendApplication, FrontendApplicationContribution } from '../frontend-application';
 
 export interface StatusBarLayoutData {
     entries: StatusBarEntryData[]
@@ -66,11 +67,11 @@ export interface StatusBar {
 }
 
 @injectable()
-export class StatusBarImpl extends VirtualWidget implements StatusBar {
+export class StatusBarImpl extends VirtualWidget implements StatusBar, FrontendApplicationContribution {
 
     protected backgroundColor: string | undefined;
     protected entries: Map<string, StatusBarEntry> = new Map();
-    protected attached = new Deferred<void>();
+    protected pret = new Deferred<void>();
 
     constructor(
         @inject(CommandService) protected readonly commands: CommandService,
@@ -81,25 +82,29 @@ export class StatusBarImpl extends VirtualWidget implements StatusBar {
         this.id = 'theia-statusBar';
     }
 
+    onReady(app: FrontendApplication): void {
+        this.pret.resolve();
+    }
+
     onAfterAttach(msg: Message): void {
         super.onAfterAttach(msg);
-        this.attached.resolve();
     }
 
     async setElement(id: string, entry: StatusBarEntry): Promise<void> {
-        await this.attached.promise;
+        await this.pret.promise;
+        console.log("JE SET LA NOUVELLE ENTRÉE");
         this.entries.set(id, entry);
         this.update();
     }
 
     async removeElement(id: string): Promise<void> {
-        await this.attached.promise;
+        await this.pret.promise;
         this.entries.delete(id);
         this.update();
     }
 
     async setBackgroundColor(color?: string): Promise<void> {
-        await this.attached.promise;
+        await this.pret.promise;
         this.internalSetBackgroundColor(color);
     }
 
@@ -118,6 +123,7 @@ export class StatusBarImpl extends VirtualWidget implements StatusBar {
     }
 
     setLayoutData(data: StatusBarLayoutData): void {
+        console.log("JE RESTORE LE DATA");
         if (data.entries) {
             data.entries.forEach(entryData => {
                 this.entries.set(entryData.id, entryData.entry);

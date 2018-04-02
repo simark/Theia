@@ -38,6 +38,8 @@ export interface FrontendApplicationContribution {
      */
     onStop?(app: FrontendApplication): void;
 
+    onReady?(app: FrontendApplication): void;
+
     /**
      * Called after the application shell has been attached in case there is no previous workbench layout state.
      * Should return a promise if it runs asynchronously.
@@ -95,6 +97,12 @@ export class FrontendApplication {
         await this.revealShell(host);
         this.registerEventListeners();
         this.shell.loading = false;
+
+        for (const pouet of this.contributions.getContributions()) {
+            if (pouet.onReady) {
+                await pouet.onReady(this);
+            }
+        }
     }
 
     /**

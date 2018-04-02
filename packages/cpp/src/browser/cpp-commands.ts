@@ -9,12 +9,17 @@ import { inject, injectable } from "inversify";
 import { SelectionService } from '@theia/core/lib/common';
 import { CommandContribution, CommandRegistry, Command } from '@theia/core/lib/common';
 import URI from "@theia/core/lib/common/uri";
-import { open, OpenerService } from '@theia/core/lib/browser';
+import { open, OpenerService, } from '@theia/core/lib/browser';
 import { CppClientContribution } from "./cpp-client-contribution";
 import { SwitchSourceHeaderRequest } from "./cpp-protocol";
-import { TextDocumentIdentifier } from "@theia/languages/lib/common";
+import { TextDocumentIdentifier, } from "@theia/languages/lib/common";
+import { FileDialogFactory } from '@theia/filesystem/lib/browser';
 import { EditorManager } from "@theia/editor/lib/browser";
 import { HEADER_AND_SOURCE_FILE_EXTENSIONS } from '../common';
+import { FileSystem } from "@theia/filesystem/lib/common";
+import { WorkspaceService } from "@theia/workspace/lib/browser";
+import { LabelProvider } from "@theia/core/lib/browser/label-provider";
+import { } from "@theia/languages/lib/browser/build-configurations";
 
 /**
  * Switch between source/header file
@@ -24,9 +29,9 @@ export const SWITCH_SOURCE_HEADER: Command = {
     label: 'C++: Switch between source/header file'
 };
 
-export const FILE_OPEN_PATH = (path: string): Command => <Command>{
-    id: `file:openPath`
-};
+export interface ClangdConfigurationParams {
+    compilationDatabasePath?: string;
+}
 
 export function editorContainsCppFiles(editorManager: EditorManager | undefined): boolean {
     if (editorManager && editorManager.activeEditor) {
@@ -40,9 +45,13 @@ export function editorContainsCppFiles(editorManager: EditorManager | undefined)
 export class CppCommandContribution implements CommandContribution {
 
     constructor(
+        @inject(FileSystem) protected readonly fileSystem: FileSystem,
+        @inject(FileDialogFactory) protected readonly fileDialogFactory: FileDialogFactory,
         @inject(CppClientContribution) protected readonly clientContribution: CppClientContribution,
         @inject(OpenerService) protected readonly openerService: OpenerService,
         @inject(EditorManager) private editorService: EditorManager,
+        @inject(WorkspaceService) protected readonly workspaceService: WorkspaceService,
+        @inject(LabelProvider) protected readonly labelProvider: LabelProvider,
         protected readonly selectionService: SelectionService
 
     ) { }

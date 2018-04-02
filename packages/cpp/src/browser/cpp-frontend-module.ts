@@ -22,5 +22,4 @@ export default new ContainerModule(bind => {
 
     bind(CppClientContribution).toSelf().inSingletonScope();
     bind(LanguageClientContribution).toDynamicValue(ctx => ctx.container.get(CppClientContribution));
-
 });

@@ -110,6 +110,7 @@ export const frontendApplicationModule = new ContainerModule((bind, unbind, isBo
 
     bind(StatusBarImpl).toSelf().inSingletonScope();
     bind(StatusBar).toDynamicValue(ctx => ctx.container.get(StatusBarImpl)).inSingletonScope();
+    bind(FrontendApplicationContribution).toDynamicValue(ctx => ctx.container.get<StatusBarImpl>(StatusBarImpl)).inSingletonScope();
     bind(LabelParser).toSelf().inSingletonScope();
 
     bindContributionProvider(bind, LabelProviderContribution);
