@@ -49,11 +49,13 @@ export namespace QuickOpenOptions {
 }
 
 @injectable()
-export class QuickOpenService {
+export abstract class QuickOpenService {
     /**
      * It should be implemented by an extension, e.g. by the monaco extension.
      */
     open(model: QuickOpenModel, options?: QuickOpenOptions): void {
         // no-op
     }
+
+    abstract refresh(): void;
 }

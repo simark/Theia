@@ -47,6 +47,7 @@ export class MonacoQuickOpenService extends QuickOpenService {
     internalOpen(opts: MonacoQuickOpenControllerOpts): void {
         this.opts = opts;
         this.previousActiveElement = window.document.activeElement;
+        this.lastLookFor = '';
         const widget = this.widget;
         widget.show(this.opts.prefix || '');
         widget.setPlaceHolder(opts.inputAriaLabel);
@@ -92,7 +93,10 @@ export class MonacoQuickOpenService extends QuickOpenService {
         }
     }
 
+    protected lastLookFor = '';
+
     protected async onType(lookFor: string): Promise<void> {
+        this.lastLookFor = lookFor;
         const opts = this.opts;
         if (this.widget && opts) {
             if (opts.onType) {
@@ -103,6 +107,10 @@ export class MonacoQuickOpenService extends QuickOpenService {
                 this.widget.setInput(m, opts.getAutoFocus(lookFor), opts.inputAriaLabel);
             }
         }
+    }
+
+    refresh() {
+        this.onType(this.lastLookFor);
     }
 
 }
