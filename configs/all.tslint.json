@@ -1,6 +1,6 @@
 {
   "defaultSeverity": "warning",
-  "extends": "./strict.tslint.json",
+  "extends": "../tslint.json",
   "rules": {
     "array-type": [
       true,
