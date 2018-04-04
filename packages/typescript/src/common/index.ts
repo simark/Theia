@@ -10,3 +10,6 @@ export const TYPESCRIPT_LANGUAGE_NAME = 'TypeScript';
 
 export const JAVASCRIPT_LANGUAGE_ID = 'javascript';
 export const JAVASCRIPT_LANGUAGE_NAME = 'JavaScript';
+
+export const TYPESCRIPT_LINT_LANGUAGE_ID = 'tslint';
+export const TYPESCRIPT_LINT_LANGUAGE_NAME = 'Typescript Linter';

@@ -6,9 +6,14 @@
  */
 
 import { injectable, inject } from "inversify";
-import { BaseLanguageClientContribution, Workspace, Languages, LanguageClientFactory } from '@theia/languages/lib/browser';
-import { TYPESCRIPT_LANGUAGE_ID, TYPESCRIPT_LANGUAGE_NAME } from '../common';
+import {
+    BaseLanguageClientContribution,
+    Workspace, Languages, LanguageClientFactory, DocumentSelector, ILanguageClient,
+    DidChangeConfigurationParams, DidChangeConfigurationNotification, WorkspaceEdit
+} from '@theia/languages/lib/browser';
+import { TYPESCRIPT_LANGUAGE_ID, TYPESCRIPT_LANGUAGE_NAME, TYPESCRIPT_LINT_LANGUAGE_ID, TYPESCRIPT_LINT_LANGUAGE_NAME } from '../common';
 import { JAVASCRIPT_LANGUAGE_ID, JAVASCRIPT_LANGUAGE_NAME } from '../common/index';
+import { CommandContribution, Command, CommandRegistry } from "@theia/core";
 
 @injectable()
 export class TypeScriptClientContribution extends BaseLanguageClientContribution {
@@ -32,6 +37,60 @@ export class TypeScriptClientContribution extends BaseLanguageClientContribution
     }
 
 }
+
+/**
+ * tslint command to apply a single fix.
+ */
+const APPLY_SINGLE_FIX: Command = {
+    id: '_tslint.applySingleFix'
+};
+
+@injectable()
+export class TypeScriptLinterClientContribution extends BaseLanguageClientContribution implements CommandContribution {
+
+    readonly id = TYPESCRIPT_LINT_LANGUAGE_ID;
+    readonly name = TYPESCRIPT_LINT_LANGUAGE_NAME;
+
+    constructor(
+        @inject(Workspace) protected readonly workspace: Workspace,
+        @inject(Languages) protected readonly languages: Languages,
+        @inject(LanguageClientFactory) protected readonly languageClientFactory: LanguageClientFactory
+    ) {
+        super(workspace, languages, languageClientFactory);
+    }
+
+    protected onReady(languageClient: ILanguageClient): void {
+        super.onReady(languageClient);
+
+        /* tslint-server needs to receive some configuration to become active.  */
+        const params: DidChangeConfigurationParams = {
+            settings: {
+                enable: true,
+                run: 'onType',
+            }
+        };
+        languageClient.sendNotification(DidChangeConfigurationNotification.type, params);
+    }
+
+    protected get documentSelector(): DocumentSelector | undefined {
+        return ['typescript'];
+    }
+
+    protected get globPatterns() {
+        return [
+            '**/*.ts',
+            '**/*.tsx'
+        ];
+    }
+
+    registerCommands(commandRegistry: CommandRegistry) {
+        commandRegistry.registerCommand(APPLY_SINGLE_FIX, {
+            execute: (changes: WorkspaceEdit) =>
+                !!this.workspace.applyEdit && this.workspace.applyEdit(changes)
+        });
+    }
+}
+
 @injectable()
 export class JavaScriptClientContribution extends BaseLanguageClientContribution {
 
