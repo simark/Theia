@@ -85,12 +85,12 @@ export class MarkerCollection<T> {
 
 }
 
-interface Uri2MarkerEntry {
+export interface Uri2MarkerEntry {
     uri: string
     markers: Owner2MarkerEntry[]
 }
 
-interface Owner2MarkerEntry {
+export interface Owner2MarkerEntry {
     owner: string
     markerData: object[];
 }
