@@ -68,9 +68,21 @@ export class WorkspaceService implements FrontendApplicationContribution {
 
     @postConstruct()
     protected async init(): Promise<void> {
-        const workspaceUri = await this.server.getMostRecentlyUsedWorkspace();
-        const workspaceFileStat = await this.toFileStat(workspaceUri);
-        await this.setWorkspace(workspaceFileStat);
+        let wpUriString: string | undefined = undefined;
+
+        // Prefer the workspace path specified as the URL fragment, if present.
+        if (window.location.hash.length > 1) {
+            // Remove the leading #.
+            const wpPath = window.location.hash.substring(1);
+            wpUriString = new URI().withPath(wpPath).withScheme('file').toString();
+        } else {
+            // Else, ask the server for its suggested workspace (usually the one
+            // specified on the CLI, or the most recent).
+            wpUriString = await this.server.getMostRecentlyUsedWorkspace();
+        }
+
+        const wpStat = await this.toFileStat(wpUriString);
+        await this.setWorkspace(wpStat);
 
         this.watcher.onFilesChanged(event => {
             if (this._workspace && FileChangeEvent.isAffected(event, new URI(this._workspace.uri))) {
@@ -321,6 +333,7 @@ export class WorkspaceService implements FrontendApplicationContribution {
     close(): void {
         this._workspace = undefined;
         this._roots.length = 0;
+        window.location.hash = '';
 
         this.server.setMostRecentlyUsedWorkspace('');
         this.reloadWindow();
@@ -361,13 +374,16 @@ export class WorkspaceService implements FrontendApplicationContribution {
 
     protected openWindow(uri: FileStat, options?: WorkspaceInput): void {
         if (this.shouldPreserveWindow(options)) {
+            const uriObj = new URI(uri.uri);
+            window.location.hash = uriObj.path.toString();
             this.reloadWindow();
         } else {
             try {
                 this.openNewWindow();
             } catch (error) {
                 // Fall back to reloading the current window in case the browser has blocked the new window
-                this._workspace = uri;
+                const uriObj = new URI(uri.uri);
+                window.location.hash = uriObj.path.toString();
                 this.logger.error(error.toString()).then(async () => await this.reloadWindow());
             }
         }
