@@ -17,6 +17,12 @@
 import * as chai from "chai";
 import * as path from 'path';
 import * as electron from 'electron';
+import * as cluster from 'cluster';
+import { Address } from "cluster";
+
+cluster.setupMaster({
+    exec: './src-gen/frontend/electron-main.js'
+});
 
 const expect = chai.expect;
 
@@ -26,12 +32,12 @@ const { app } = require('electron');
 
 describe('basic-example-spec', () => {
     describe('01 #start example app', () => {
-        it('should start the electron example app', (done) => {
+        it('should start the electron example app', async (done) => {
             if (app.isReady()) {
-                require("../src-gen/backend/main"); // start the express server
+                const addr = <Address>await require("../src-gen/backend/main"); // start the express server
 
                 mainWindow.webContents.openDevTools();
-                mainWindow.loadURL(`file://${path.join(__dirname, 'index.html')}`);
+                mainWindow.loadURL(`file://${path.join(__dirname, '..', 'lib', `index.html?port=${addr.port}`)}`);
             }
             expect(mainWindow.isVisible()).to.be.true;
             done();
