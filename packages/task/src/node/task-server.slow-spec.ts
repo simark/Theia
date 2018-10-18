@@ -26,6 +26,7 @@ import { FileUri } from '@theia/core/lib/node';
 import { terminalsPath } from '@theia/terminal/lib/common/terminal-protocol';
 import { expectThrowsAsync } from '@theia/core/lib/common/test/expect';
 import { TestWebSocketChannel } from '@theia/core/lib/node/messaging/test/test-web-socket-channel';
+import { expect } from 'chai';
 
 /**
  * Globals
@@ -178,36 +179,41 @@ describe('Task server / back-end', function () {
         // const command = isWindows ? command_absolute_path_long_running_windows : command_absolute_path_long_running;
         const taskInfo: TaskInfo = await taskServer.run(createTaskConfigTaskLongRunning('shell'), wsRoot);
 
-        const p = new Promise((resolve, reject) => {
-            const toDispose = taskWatcher.onTaskExit((event: TaskExitedEvent) => {
-                if (event.taskId === taskInfo.taskId && event.code === 0 && event.signal !== '0') {
-                    toDispose.dispose();
-                    resolve();
+        const p = new Promise<string>((resolve, reject) => {
+            taskWatcher.onTaskExit((event: TaskExitedEvent) => {
+                if (event.taskId !== taskInfo.taskId || event.signal === undefined) {
+                    reject();
                 }
+
+                resolve(event.signal);
             });
+
+            taskServer.kill(taskInfo.taskId);
         });
 
-        await taskServer.kill(taskInfo.taskId);
-
-        await p;
+        const signal = await p;
+        // node-pty sends SIGHUP by default, for some reason.
+        expect(signal).equals('SIGHUP');
     });
 
     it('task using raw process can be killed', async function () {
         // const command = isWindows ? command_absolute_path_long_running_windows : command_absolute_path_long_running;
         const taskInfo: TaskInfo = await taskServer.run(createTaskConfigTaskLongRunning('process'), wsRoot);
 
-        const p = new Promise((resolve, reject) => {
-            const toDispose = taskWatcher.onTaskExit((event: TaskExitedEvent) => {
-                if (event.taskId === taskInfo.taskId && event.code === null && event.signal === 'SIGTERM') {
-                    toDispose.dispose();
-                    resolve();
+        const p = new Promise<string>((resolve, reject) => {
+            taskWatcher.onTaskExit((event: TaskExitedEvent) => {
+                if (event.taskId !== taskInfo.taskId || event.signal === undefined) {
+                    reject();
                 }
+
+                resolve(event.signal);
             });
+
+            taskServer.kill(taskInfo.taskId);
         });
 
-        await taskServer.kill(taskInfo.taskId);
-
-        await p;
+        const signal = await p;
+        expect(signal).equals('SIGTERM');
     });
 
     it('task using terminal process can handle command that does not exist', async function () {
