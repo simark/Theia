@@ -179,21 +179,38 @@ describe('Task server / back-end', function () {
         // const command = isWindows ? command_absolute_path_long_running_windows : command_absolute_path_long_running;
         const taskInfo: TaskInfo = await taskServer.run(createTaskConfigTaskLongRunning('shell'), wsRoot);
 
-        const p = new Promise<string>((resolve, reject) => {
+        const p = new Promise<string | number>((resolve, reject) => {
             taskWatcher.onTaskExit((event: TaskExitedEvent) => {
-                if (event.taskId !== taskInfo.taskId || event.signal === undefined) {
-                    reject();
+                if (isWindows) {
+                    if (event.taskId !== taskInfo.taskId || event.code === undefined) {
+                        reject();
+                    }
+                    resolve(event.code);
+                } else {
+                    if (event.taskId !== taskInfo.taskId || event.signal === undefined) {
+                        reject();
+                    }
+                    resolve(event.signal);
                 }
 
-                resolve(event.signal);
+
             });
 
             taskServer.kill(taskInfo.taskId);
         });
 
-        const signal = await p;
-        // node-pty sends SIGHUP by default, for some reason.
-        expect(signal).equals('SIGHUP');
+        // node-pty reports different things on Linux/macOS vs Windows when
+        // killing a process.  This is not ideal, but that's how things are
+        // currently.  Ideally, its behavior should be aligned as much as
+        // possible on what node's child_process module does.
+        const signalOrCode = await p;
+        if (isWindows) {
+            // On Windows, node-pty just reports an exit code of 0.
+            expect(signalOrCode).equals(0);
+        } else {
+            // On Linux/macOS, node-pty sends SIGHUP by default, for some reason.
+            expect(signalOrCode).equals('SIGHUP');
+        }
     });
 
     it('task using raw process can be killed', async function () {
