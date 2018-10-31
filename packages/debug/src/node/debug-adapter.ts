@@ -50,7 +50,7 @@ export class LaunchBasedDebugAdapterFactory implements DebugAdapterFactory {
     @inject(ProcessManager)
     protected readonly processManager: ProcessManager;
 
-    start(executable: DebugAdapterExecutable): CommunicationProvider {
+    async start(executable: DebugAdapterExecutable): Promise<CommunicationProvider> {
         const process = this.spawnProcess(executable);
         // FIXME: propagate onError + onExit
         return {
@@ -72,7 +72,7 @@ export class LaunchBasedDebugAdapterFactory implements DebugAdapterFactory {
         return this.processFactory({ command: command, args: args, options: { stdio: ['pipe', 'pipe', 2] } });
     }
 
-    connect(debugServerPort: number): CommunicationProvider {
+    async connect(debugServerPort: number): Promise<CommunicationProvider> {
         const socket = net.createConnection(debugServerPort);
         // FIXME: propagate socket.on('error', ...) + socket.on('close', ...)
         return {

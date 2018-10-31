@@ -141,10 +141,10 @@ export class DebugAdapterSessionManager {
 
         let communicationProvider;
         if ('debugServer' in config) {
-            communicationProvider = this.debugAdapterFactory.connect(config.debugServer);
+            communicationProvider = await this.debugAdapterFactory.connect(config.debugServer);
         } else {
             const executable = await this.registry.provideDebugAdapterExecutable(config);
-            communicationProvider = this.debugAdapterFactory.start(executable);
+            communicationProvider = await this.debugAdapterFactory.start(executable);
         }
 
         const sessionFactory = this.registry.debugAdapterSessionFactory(config.type) || this.debugAdapterSessionFactory;
