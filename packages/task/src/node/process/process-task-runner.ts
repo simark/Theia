@@ -113,7 +113,8 @@ export class ProcessTaskRunner implements TaskRunner {
                 proc = await this.terminalProcessFactory.create(<TerminalProcessOptions>{
                     command: command,
                     args: args,
-                    options: options
+                    options: options,
+                    shell: true,
                 });
             }
             return this.taskFactory({

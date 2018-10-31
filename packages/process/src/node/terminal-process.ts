@@ -20,6 +20,7 @@ import { Process, ProcessType, ProcessOptions } from './process';
 import { ProcessManager } from './process-manager';
 import { IPty, spawn } from 'node-pty';
 import { MultiRingBuffer, MultiRingBufferReadableStream } from './multi-ring-buffer';
+import { makeShellExecAndArgs } from './utils';
 
 export const TerminalProcessOptions = Symbol('TerminalProcessOptions');
 export interface TerminalProcessOptions extends ProcessOptions {
@@ -40,10 +41,20 @@ export class TerminalProcessFactoryImpl implements TerminalProcessFactory {
     logger: ILogger;
 
     async create(options: TerminalProcessOptions): Promise<TerminalProcess> {
-        const process = spawn(options.command, options.args || [], options.options || {});
-
         this.logger.debug('Starting terminal process', JSON.stringify(options, undefined, 2));
 
+        let command: string;
+        let args: string[] | undefined;
+        if (options.shell) {
+            const res = makeShellExecAndArgs(options.command, options.args);
+            command = res.shellExecutable;
+            args = res.shellArguments;
+        } else {
+            command = options.command;
+            args = options.args || [];
+        }
+
+        const process = spawn(command, args, options.options || {});
         const buffer = new MultiRingBuffer({ size: 1048576 });
         const terminalProcess = new TerminalProcess(process, buffer, this.logger);
 

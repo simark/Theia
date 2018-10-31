@@ -29,7 +29,8 @@ export enum ProcessType {
 export interface ProcessOptions {
     readonly command: string,
     args?: string[],
-    options?: object
+    options?: object,
+    shell?: boolean,
 }
 
 export abstract class Process {

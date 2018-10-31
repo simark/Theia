@@ -26,7 +26,7 @@ import { isWindows } from '@theia/core/lib/common';
 
 const expect = chai.expect;
 
-describe('TerminalProcess', function () {
+describe('TerminalProcess', function() {
 
     this.timeout(5000);
     let terminalProcessFactory: TerminalProcessFactory;
@@ -35,7 +35,7 @@ describe('TerminalProcess', function () {
         terminalProcessFactory = createProcessTestContainer().get<TerminalProcessFactory>(TerminalProcessFactory);
     });
 
-    it('test error on non existent path', async function () {
+    it('test error on non existent path', async function() {
 
         /* Strangely, Linux returns exited with code 1 when using a non existing path but Windows throws an error.
         This would need to be investigated more.  */
@@ -53,7 +53,7 @@ describe('TerminalProcess', function () {
         }
     });
 
-    it('test exit', async function () {
+    it('test exit', async function() {
         const args = ['--version'];
         const terminalProcess = await terminalProcessFactory.create({ command: process.execPath, 'args': args });
         const p = new Promise((resolve, reject) => {
@@ -69,7 +69,7 @@ describe('TerminalProcess', function () {
         await p;
     });
 
-    it('test pipe stream', async function () {
+    it('test pipe stream', async function() {
         const args = ['--version'];
         const terminalProcess = await terminalProcessFactory.create({ command: process.execPath, 'args': args });
 
@@ -91,5 +91,23 @@ describe('TerminalProcess', function () {
 
         /* Avoid using equal since terminal characters can be inserted at the end.  */
         expect(await p).to.have.string(process.version);
+    });
+
+    it('test shell', async function() {
+        const p = new Promise<string>(async (resolve, reject) => {
+            const terminalProcess = await terminalProcessFactory.create({
+                command: 'echo foooo',
+                shell: true,
+            });
+
+            const ostream = terminalProcess.createOutputStream();
+            ostream.on('data', data => {
+                const dataStr = data.toString();
+                resolve(dataStr.trim());
+            });
+        });
+
+        const output = await p;
+        expect(output).eq('foooo');
     });
 });

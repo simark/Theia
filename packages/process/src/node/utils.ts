@@ -15,6 +15,7 @@
  ********************************************************************************/
 
 const stringArgv = require('string-argv');
+import { isWindows, isOSX } from '@theia/core/lib/common/os';
 
 /**
  * Parses the given line into an array of args respecting escapes and string literals.
@@ -22,4 +23,55 @@ const stringArgv = require('string-argv');
  */
 export function parseArgs(line: string): string[] {
     return stringArgv(line);
+}
+
+export function getDefaultShellExecutablePath(): string {
+    const shell = process.env.THEIA_SHELL;
+    if (shell) {
+        return shell;
+    }
+
+    if (isWindows) {
+        return 'cmd.exe';
+    } else {
+        return process.env.SHELL!;
+    }
+}
+
+export function getDefaultShellExecutableArgs(): string[] {
+    const args = process.env.THEIA_SHELL_ARGS;
+    if (args) {
+        return parseArgs(args);
+    }
+    if (isOSX) {
+        return ['-l'];
+    } else {
+        return [];
+    }
+}
+
+export interface ShellExecAndArgs {
+    shellExecutable: string;
+    shellArguments: string[];
+}
+
+/**
+ * Make
+ */
+export function makeShellExecAndArgs(command: string, args?: string[]): ShellExecAndArgs {
+    if (args) {
+        command = command.concat(args.join(' '));
+    }
+
+    if (isWindows) {
+        return {
+            shellExecutable: getDefaultShellExecutablePath(),
+            shellArguments: ['/d', '/s', '/c', command],
+        };
+    } else {
+        return {
+            shellExecutable: getDefaultShellExecutablePath(),
+            shellArguments: ['-c', command],
+        };
+    }
 }

@@ -16,11 +16,10 @@
 
 import { injectable, inject } from 'inversify';
 import * as os from 'os';
-import { TerminalProcess, TerminalProcessOptions, TerminalProcessFactory } from '@theia/process/lib/node';
-import { isWindows, isOSX } from '@theia/core/lib/common';
+import { TerminalProcess, TerminalProcessFactory, TerminalProcessOptions } from '@theia/process/lib/node';
 import URI from '@theia/core/lib/common/uri';
 import { FileUri } from '@theia/core/lib/node/file-uri';
-import { parseArgs } from '@theia/process/lib/node/utils';
+import { getDefaultShellExecutableArgs, getDefaultShellExecutablePath } from '@theia/process/lib/node/utils';
 
 export const ShellProcessFactory = Symbol('ShellProcessFactory');
 export interface ShellProcessFactory {
@@ -47,8 +46,8 @@ export class ShellProcessFactoryImpl implements ShellProcessFactory {
 
     create(options: ShellProcessOptions): Promise<TerminalProcess> {
         const opts: TerminalProcessOptions = {
-            command: options.shell || getShellExecutablePath(),
-            args: options.args || getShellExecutableArgs(),
+            command: options.shell || getDefaultShellExecutablePath(),
+            args: options.args || getDefaultShellExecutableArgs(),
             options: {
                 name: 'xterm-color',
                 cols: options.cols || defaultCols,
@@ -85,29 +84,5 @@ function getRootPath(rootURI?: string): string {
         return FileUri.fsPath(uri);
     } else {
         return os.homedir();
-    }
-}
-
-function getShellExecutablePath(): string {
-    const shell = process.env.THEIA_SHELL;
-    if (shell) {
-        return shell;
-    }
-    if (isWindows) {
-        return 'cmd.exe';
-    } else {
-        return process.env.SHELL!;
-    }
-}
-
-function getShellExecutableArgs(): string[] {
-    const args = process.env.THEIA_SHELL_ARGS;
-    if (args) {
-        return parseArgs(args);
-    }
-    if (isOSX) {
-        return ['-l'];
-    } else {
-        return [];
     }
 }
