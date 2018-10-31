@@ -23,6 +23,9 @@ export interface IProcessExitEvent {
     readonly signal?: string
 }
 
+export interface IProcessStartEvent {
+}
+
 export enum ProcessType {
     'Raw',
     'Terminal'
@@ -38,6 +41,7 @@ export interface ProcessOptions {
 export abstract class Process {
 
     readonly id: number;
+    protected readonly startEmitter: Emitter<IProcessStartEvent> = new Emitter<IProcessStartEvent>();
     protected readonly exitEmitter: Emitter<IProcessExitEvent> = new Emitter<IProcessExitEvent>();
     protected readonly errorEmitter: Emitter<Error> = new Emitter<Error>();
     abstract readonly pid: number;
@@ -58,12 +62,20 @@ export abstract class Process {
         return this._killed;
     }
 
+    get onStart(): Event<IProcessStartEvent> {
+        return this.startEmitter.event;
+    }
+
     get onExit(): Event<IProcessExitEvent> {
         return this.exitEmitter.event;
     }
 
     get onError(): Event<Error> {
         return this.errorEmitter.event;
+    }
+
+    protected emitOnStarted() {
+        this.startEmitter.fire({});
     }
 
     protected emitOnExit(code: number, signal?: string) {

@@ -116,6 +116,12 @@ export class ProcessTaskRunner implements TaskRunner {
                     options: options
                 });
             }
+
+            await new Promise((resolve, reject) => {
+                proc.onStart(resolve);
+                proc.onError(reject);
+            });
+
             return this.taskFactory({
                 label: taskConfig.label,
                 command: cmd,

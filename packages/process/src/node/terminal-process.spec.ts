@@ -19,6 +19,7 @@ import * as stream from 'stream';
 import { createProcessTestContainer } from './test/process-test-container';
 import { TerminalProcessFactory } from './terminal-process';
 import { isWindows } from '@theia/core/lib/common';
+import { IProcessExitEvent } from './process';
 
 /**
  * Globals
@@ -26,7 +27,7 @@ import { isWindows } from '@theia/core/lib/common';
 
 const expect = chai.expect;
 
-describe('TerminalProcess', function () {
+describe('TerminalProcess', function() {
 
     this.timeout(5000);
     let terminalProcessFactory: TerminalProcessFactory;
@@ -35,50 +36,50 @@ describe('TerminalProcess', function () {
         terminalProcessFactory = createProcessTestContainer().get<TerminalProcessFactory>(TerminalProcessFactory);
     });
 
-    it('test error on non existent path', async function () {
+    it('test error on non existent path', async function() {
 
         /* Strangely, Linux returns exited with code 1 when using a non existing path but Windows throws an error.
         This would need to be investigated more.  */
         if (isWindows) {
-            return expect(() => terminalProcessFactory({ command: '/non-existent' })).to.throw();
-        } else {
-            const terminalProcess = terminalProcessFactory({ command: '/non-existant' });
-            const p = new Promise(resolve => {
-                terminalProcess.onExit(event => {
-                    if (event.code > 0) { resolve(); }
-                });
+            const error = await new Promise<Error>((resolve, reject) => {
+                const proc = terminalProcessFactory({ command: '/non-existent' });
+                proc.onStart(reject);
+                proc.onError(resolve);
             });
 
-            await p;
+            expect(error).instanceof(Error);
+            expect(error).not.eq(undefined);
+        } else {
+            const exit = await new Promise<IProcessExitEvent>((resolve, reject) => {
+                const proc = terminalProcessFactory({ command: '/non-existent' });
+                proc.onError(reject);
+                proc.onExit(resolve);
+            });
+
+            expect(exit.code).gt(0);
         }
     });
 
-    it('test exit', async function () {
+    it('test exit', async function() {
         const args = ['--version'];
-        const terminalProcess = terminalProcessFactory({ command: process.execPath, 'args': args });
-        const p = new Promise((resolve, reject) => {
-            terminalProcess.onError(error => {
-                reject();
-            });
-            terminalProcess.onExit(event => {
-                if (event.code === 0) {
-                    resolve();
-                } else {
-                    reject();
-                }
-            });
+        const exit = await new Promise<IProcessExitEvent>((resolve, reject) => {
+            const proc = terminalProcessFactory({ command: process.execPath, 'args': args });
+            proc.onExit(resolve);
+            proc.onError(reject);
         });
 
-        await p;
+        expect(exit.code).eq(0);
     });
 
-    it('test pipe stream', async function () {
-        const args = ['--version'];
-        const terminalProcess = terminalProcessFactory({ command: process.execPath, 'args': args });
+    it('test pipe stream', async function() {
+        const v = await new Promise<string>((resolve, reject) => {
+            const args = ['--version'];
+            const terminalProcess = terminalProcessFactory({ command: process.execPath, 'args': args });
+            terminalProcess.onError(reject);
+            const outStream = new stream.PassThrough();
 
-        const outStream = new stream.PassThrough();
+            terminalProcess.createOutputStream().pipe(outStream);
 
-        const p = new Promise<string>((resolve, reject) => {
             let version = '';
             outStream.on('data', data => {
                 version += data.toString();
@@ -90,9 +91,7 @@ describe('TerminalProcess', function () {
             });
         });
 
-        terminalProcess.createOutputStream().pipe(outStream);
-
         /* Avoid using equal since terminal characters can be inserted at the end.  */
-        expect(await p).to.have.string(process.version);
+        expect(v).to.have.string(process.version);
     });
 });

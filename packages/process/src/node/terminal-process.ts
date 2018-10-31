@@ -57,6 +57,10 @@ export class TerminalProcess extends Process {
         this.terminal.on('data', (data: string) => {
             ringBuffer.enq(data);
         });
+
+        process.nextTick(() => {
+            this.emitOnStarted();
+        });
     }
 
     createOutputStream(): MultiRingBufferReadableStream {
