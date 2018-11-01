@@ -23,7 +23,7 @@ import { MessageConnection } from 'vscode-jsonrpc';
 import { createWebSocketConnection } from 'vscode-ws-jsonrpc/lib/socket/connection';
 import { IConnection } from 'vscode-ws-jsonrpc/lib/server/connection';
 import * as launch from 'vscode-ws-jsonrpc/lib/server/launch';
-import { ContributionProvider, ConnectionHandler } from '../../common';
+import { ContributionProvider, ConnectionHandler, MaybePromise } from '../../common';
 import { WebSocketChannel } from '../../common/messaging/web-socket-channel';
 import { BackendApplicationContribution } from '../backend-application';
 import { MessagingService } from './messaging-service';
@@ -63,15 +63,15 @@ export class MessagingContribution implements BackendApplicationContribution, Me
         });
     }
 
-    forward(spec: string, callback: (params: MessagingService.PathParams, connection: IConnection) => void): void {
-        return this.wsChannel(spec, (params, channel) => {
+    forward(spec: string, callback: (params: MessagingService.PathParams, connection: IConnection) => MaybePromise<void>): void {
+        return this.wsChannel(spec, (params, channel): MaybePromise<void> => {
             const connection = launch.createWebSocketConnection(channel);
-            callback(params, connection);
+            return callback(params, connection);
         });
     }
 
-    wsChannel(spec: string, callback: (params: MessagingService.PathParams, channel: WebSocketChannel) => void): void {
-        return this.channelHandlers.push(spec, (params, channel) => callback(params, channel));
+    wsChannel(spec: string, callback: (params: MessagingService.PathParams, channel: WebSocketChannel) => MaybePromise<void>): void {
+        return this.channelHandlers.push(spec, (params, channel): MaybePromise<void> => callback(params, channel));
     }
 
     ws(spec: string, callback: (params: MessagingService.PathParams, socket: ws) => void): void {
@@ -87,10 +87,10 @@ export class MessagingContribution implements BackendApplicationContribution, Me
         interface CheckAliveWS extends ws {
             alive: boolean;
         }
-        wss.on('connection', (socket: CheckAliveWS, request) => {
+        wss.on('connection', async (socket: CheckAliveWS, request) => {
             socket.alive = true;
             socket.on('pong', () => socket.alive = true);
-            this.handleConnection(socket, request);
+            await this.handleConnection(socket, request);
         });
         setInterval(() => {
             wss.clients.forEach((socket: CheckAliveWS) => {
@@ -103,22 +103,22 @@ export class MessagingContribution implements BackendApplicationContribution, Me
         }, this.checkAliveTimeout);
     }
 
-    protected handleConnection(socket: ws, request: http.IncomingMessage): void {
+    protected async handleConnection(socket: ws, request: http.IncomingMessage): Promise<void> {
         const pathname = request.url && url.parse(request.url).pathname;
-        if (pathname && !this.wsHandlers.route(pathname, socket)) {
+        if (pathname && !await this.wsHandlers.route(pathname, socket)) {
             console.error('Cannot find a ws handler for the path: ' + pathname);
         }
     }
 
     protected handleChannels(socket: ws): void {
         const channels = new Map<number, WebSocketChannel>();
-        socket.on('message', data => {
+        socket.on('message', async data => {
             try {
                 const message: WebSocketChannel.Message = JSON.parse(data.toString());
                 if (message.kind === 'open') {
                     const { id, path } = message;
                     const channel = this.createChannel(id, socket);
-                    if (this.channelHandlers.route(path, channel)) {
+                    if (await this.channelHandlers.route(path, channel)) {
                         channel.ready();
                         channels.set(id, channel);
                         channel.onClose(() => channels.delete(id));
@@ -166,24 +166,24 @@ export class MessagingContribution implements BackendApplicationContribution, Me
 }
 export namespace MessagingContribution {
     export class ConnectionHandlers<T> {
-        protected readonly handlers: ((path: string, connection: T) => string | false)[] = [];
+        protected readonly handlers: ((path: string, connection: T) => Promise<string | false>)[] = [];
 
-        push(spec: string, callback: (params: MessagingService.PathParams, connection: T) => void): void {
+        push(spec: string, callback: (params: MessagingService.PathParams, connection: T) => MaybePromise<void>): void {
             const route = new Route(spec);
-            this.handlers.push((path, channel) => {
+            this.handlers.push(async (path, channel): Promise<string | false> => {
                 const params = route.match(path);
                 if (!params) {
                     return false;
                 }
-                callback(params, channel);
+                await callback(params, channel);
                 return route.reverse(params);
             });
         }
 
-        route(path: string, connection: T): string | false {
+        async route(path: string, connection: T): Promise<string | false> {
             for (const handler of this.handlers) {
                 try {
-                    const result = handler(path, connection);
+                    const result = await handler(path, connection);
                     if (result) {
                         return result;
                     }

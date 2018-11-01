@@ -27,7 +27,7 @@ export class CppContribution extends BaseLanguageServerContribution {
     readonly id = CPP_LANGUAGE_ID;
     readonly name = CPP_LANGUAGE_NAME;
 
-    public start(clientConnection: IConnection): void {
+    async start(clientConnection: IConnection): Promise<void> {
         const envCommand = process.env.CPP_CLANGD_COMMAND;
         const command = envCommand ? envCommand : CLANGD_COMMAND_DEFAULT;
 
@@ -37,7 +37,7 @@ export class CppContribution extends BaseLanguageServerContribution {
             args = parseArgs(envArgs);
         }
 
-        const serverConnection = this.createProcessStreamConnection(command, args);
+        const serverConnection = await this.createProcessStreamConnection(command, args);
         this.forward(clientConnection, serverConnection);
     }
 }

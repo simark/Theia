@@ -83,7 +83,7 @@ export class RipgrepSearchInWorkspaceServer implements SearchInWorkspaceServer {
     }
 
     // Search for the string WHAT in directory ROOT.  Return the assigned search id.
-    search(what: string, rootUri: string, opts?: SearchInWorkspaceOptions): Promise<number> {
+    async search(what: string, rootUri: string, opts?: SearchInWorkspaceOptions): Promise<number> {
         // Start the rg process.  Use --vimgrep to get one result per
         // line, --color=always to get color control characters that
         // we'll use to parse the lines.
@@ -108,23 +108,9 @@ export class RipgrepSearchInWorkspaceServer implements SearchInWorkspaceServer {
             command: this.rgPath,
             args: [...args, what, ...globs, FileUri.fsPath(rootUri)]
         };
-        const process: RawProcess = this.rawProcessFactory(processOptions);
+
+        const process: RawProcess = await this.rawProcessFactory.create(processOptions);
         this.ongoingSearches.set(searchId, process);
-
-        process.onError(error => {
-            // tslint:disable-next-line:no-any
-            let errorCode = (error as any).code;
-
-            // Try to provide somewhat clearer error messages, if possible.
-            if (errorCode === 'ENOENT') {
-                errorCode = 'could not find the ripgrep (rg) binary';
-            } else if (errorCode === 'EACCES') {
-                errorCode = 'could not execute the ripgrep (rg) binary';
-            }
-
-            const errorStr = `An error happened while searching (${errorCode}).`;
-            this.wrapUpSearch(searchId, errorStr);
-        });
 
         // Running counter of results.
         let numResults = 0;
@@ -138,7 +124,7 @@ export class RipgrepSearchInWorkspaceServer implements SearchInWorkspaceServer {
             index: 0,
         };
 
-        process.output.on('data', (chunk: string) => {
+        process.stdout.on('data', (chunk: string) => {
             // We might have already reached the max number of
             // results, sent a TERM signal to rg, but we still get
             // the data that was already output in the mean time.
@@ -275,7 +261,7 @@ export class RipgrepSearchInWorkspaceServer implements SearchInWorkspaceServer {
             }
         });
 
-        process.output.on('end', () => {
+        process.stdout.on('end', () => {
             // If we reached maxResults, we should have already
             // wrapped up the search.  Returning early avoids
             // logging a warning message in wrapUpSearch.
@@ -286,7 +272,7 @@ export class RipgrepSearchInWorkspaceServer implements SearchInWorkspaceServer {
             this.wrapUpSearch(searchId);
         });
 
-        return Promise.resolve(searchId);
+        return searchId;
     }
 
     // Cancel an ongoing search.  Trying to cancel a search that doesn't exist isn't an
@@ -303,11 +289,11 @@ export class RipgrepSearchInWorkspaceServer implements SearchInWorkspaceServer {
     }
 
     // Send onDone to the client and clean up what we know about search searchId.
-    private wrapUpSearch(searchId: number, error?: string) {
+    private wrapUpSearch(searchId: number) {
         if (this.ongoingSearches.delete(searchId)) {
             if (this.client) {
-                this.logger.debug('Sending onDone for ' + searchId, error);
-                this.client.onDone(searchId, error);
+                this.logger.debug('Sending onDone for ' + searchId);
+                this.client.onDone(searchId);
             } else {
                 this.logger.debug('Wrapping up search ' + searchId + ' but no client');
             }

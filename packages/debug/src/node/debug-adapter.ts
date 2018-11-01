@@ -51,16 +51,16 @@ export class LaunchBasedDebugAdapterFactory implements DebugAdapterFactory {
     protected readonly processManager: ProcessManager;
 
     async start(executable: DebugAdapterExecutable): Promise<CommunicationProvider> {
-        const process = this.spawnProcess(executable);
+        const process = await this.spawnProcess(executable);
         // FIXME: propagate onError + onExit
         return {
-            input: process.input,
-            output: process.output,
+            input: process.stdin,
+            output: process.stdout,
             dispose: () => process.kill()
         };
     }
 
-    private spawnProcess(executable: DebugAdapterExecutable): RawProcess {
+    private spawnProcess(executable: DebugAdapterExecutable): Promise<RawProcess> {
         const command = executable.runtime
             ? executable.runtime
             : executable.program;
@@ -69,7 +69,7 @@ export class LaunchBasedDebugAdapterFactory implements DebugAdapterFactory {
             ? [executable.program].concat(executable.args ? executable.args : [])
             : executable.args;
 
-        return this.processFactory({ command: command, args: args, options: { stdio: ['pipe', 'pipe', 2] } });
+        return this.processFactory.create({ command: command, args: args, options: { stdio: ['pipe', 'pipe', 2] } });
     }
 
     async connect(debugServerPort: number): Promise<CommunicationProvider> {

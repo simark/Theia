@@ -36,7 +36,7 @@ export {
 
 export const LanguageServerContribution = Symbol('LanguageServerContribution');
 export interface LanguageServerContribution extends LanguageContribution {
-    start(clientConnection: IConnection): void;
+    start(clientConnection: IConnection): Promise<void>;
 }
 
 @injectable()
@@ -51,7 +51,7 @@ export abstract class BaseLanguageServerContribution implements LanguageServerCo
     @inject(ProcessManager)
     protected readonly processManager: ProcessManager;
 
-    abstract start(clientConnection: IConnection): void;
+    abstract start(clientConnection: IConnection): Promise<void>;
 
     protected forward(clientConnection: IConnection, serverConnection: IConnection): void {
         forward(clientConnection, serverConnection, this.map.bind(this));
@@ -70,21 +70,25 @@ export abstract class BaseLanguageServerContribution implements LanguageServerCo
     protected async createProcessSocketConnection(outSocket: MaybePromise<net.Socket>, inSocket: MaybePromise<net.Socket>,
         command: string, args?: string[], options?: cp.SpawnOptions): Promise<IConnection> {
 
-        const process = this.spawnProcess(command, args, options);
+        const process = await this.spawnProcess(command, args, options);
         const [outSock, inSock] = await Promise.all([outSocket, inSocket]);
         return createProcessSocketConnection(process.process, outSock, inSock);
     }
 
-    protected createProcessStreamConnection(command: string, args?: string[], options?: cp.SpawnOptions): IConnection {
-        const process = this.spawnProcess(command, args, options);
-        return createStreamConnection(process.output, process.input, () => process.kill());
+    protected async createProcessStreamConnection(command: string, args?: string[], options?: cp.SpawnOptions): Promise<IConnection> {
+        const process = await this.spawnProcess(command, args, options);
+        return createStreamConnection(process.stdout, process.stdin, () => process.kill());
     }
 
-    protected spawnProcess(command: string, args?: string[], options?: cp.SpawnOptions): RawProcess {
-        const rawProcess = this.processFactory({ command, args, options });
-        rawProcess.process.once('error', this.onDidFailSpawnProcess.bind(this));
-        rawProcess.process.stderr.on('data', this.logError.bind(this));
-        return rawProcess;
+    protected async spawnProcess(command: string, args?: string[], options?: cp.SpawnOptions): Promise<RawProcess> {
+        try {
+            const rawProcess = await this.processFactory.create({ command, args, options });
+            rawProcess.stderr.on('data', this.logError.bind(this));
+            return rawProcess;
+        } catch (error) {
+            this.onDidFailSpawnProcess(error);
+            throw error;
+        }
     }
 
     protected onDidFailSpawnProcess(error: Error): void {

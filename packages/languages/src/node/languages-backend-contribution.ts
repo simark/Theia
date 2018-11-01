@@ -32,9 +32,9 @@ export class LanguagesBackendContribution implements MessagingService.Contributi
     configure(service: MessagingService): void {
         for (const contribution of this.contributors.getContributions()) {
             const path = LanguageContribution.getPath(contribution);
-            service.forward(path, (params, connection) => {
+            service.forward(path, async (params, connection) => {
                 try {
-                    contribution.start(connection);
+                    await contribution.start(connection);
                 } catch (e) {
                     this.logger.error(`Error occurred while starting language contribution. ${path}.`, e);
                     connection.dispose();

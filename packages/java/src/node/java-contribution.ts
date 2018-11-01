@@ -54,7 +54,7 @@ export class JavaContribution extends BaseLanguageServerContribution {
         }
     }
 
-    start(clientConnection: IConnection): void {
+    async start(clientConnection: IConnection): Promise<void> {
 
         const socketPort = this.cli.lsPort();
         if (socketPort) {
@@ -101,7 +101,7 @@ export class JavaContribution extends BaseLanguageServerContribution {
             '-data', workspacePath
         );
 
-        this.startSocketServer().then(server => {
+        return this.startSocketServer().then(server => {
             const socket = this.accept(server);
 
             this.logInfo('logs at ' + path.resolve(workspacePath, '.metadata', '.log'));
@@ -109,7 +109,7 @@ export class JavaContribution extends BaseLanguageServerContribution {
             const address = server.address();
             env.CLIENT_HOST = address.address;
             env.CLIENT_PORT = address.port;
-            this.createProcessSocketConnection(socket, socket, command, args, { env })
+            return this.createProcessSocketConnection(socket, socket, command, args, { env })
                 .then(serverConnection => this.forward(clientConnection, serverConnection));
         });
     }

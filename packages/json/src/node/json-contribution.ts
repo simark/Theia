@@ -25,14 +25,14 @@ export class JsonContribution extends BaseLanguageServerContribution {
     readonly id = JSON_LANGUAGE_ID;
     readonly name = JSON_LANGUAGE_NAME;
 
-    start(clientConnection: IConnection): void {
+    async start(clientConnection: IConnection): Promise<void> {
         const command = 'node';
         const args: string[] = [
             path.resolve(__dirname, './json-starter'),
             '--stdio'
         ];
         try {
-            const serverConnection = this.createProcessStreamConnection(command, args);
+            const serverConnection = await this.createProcessStreamConnection(command, args);
             serverConnection.reader.onError(err => {
                 console.log(err);
             });

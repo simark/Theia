@@ -48,13 +48,13 @@ export class TypeScriptContribution extends BaseLanguageServerContribution {
         }
     }
 
-    start(clientConnection: IConnection): void {
+    async start(clientConnection: IConnection): Promise<void> {
         const command = 'node';
         const args: string[] = [
             __dirname + '/startserver.js',
             '--stdio'
         ];
-        const serverConnection = this.createProcessStreamConnection(command, args);
+        const serverConnection = await this.createProcessStreamConnection(command, args);
         this.forward(clientConnection, serverConnection);
     }
 
