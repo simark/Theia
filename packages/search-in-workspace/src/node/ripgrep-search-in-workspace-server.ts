@@ -18,8 +18,9 @@ import { SearchInWorkspaceServer, SearchInWorkspaceOptions, SearchInWorkspaceRes
 import { ILogger } from '@theia/core';
 import { inject, injectable } from 'inversify';
 import { RawProcess, RawProcessFactory, RawProcessOptions } from '@theia/process/lib/node';
-import { rgPath } from 'vscode-ripgrep';
 import { FileUri } from '@theia/core/lib/node/file-uri';
+
+export const RgPath = Symbol('RgPath');
 
 @injectable()
 export class RipgrepSearchInWorkspaceServer implements SearchInWorkspaceServer {
@@ -44,6 +45,9 @@ export class RipgrepSearchInWorkspaceServer implements SearchInWorkspaceServer {
     // Highlighted blue
     private readonly MATCH_START = '\x1b\\[0?m\x1b\\[34m';
     private readonly MATCH_END = '\x1b\\[0?m';
+
+    @inject(RgPath)
+    protected readonly rgPath: string;
 
     constructor(
         @inject(ILogger) protected readonly logger: ILogger,
@@ -101,7 +105,7 @@ export class RipgrepSearchInWorkspaceServer implements SearchInWorkspaceServer {
             }
         }
         const processOptions: RawProcessOptions = {
-            command: rgPath,
+            command: this.rgPath,
             args: [...args, what, ...globs, FileUri.fsPath(rootUri)]
         };
         const process: RawProcess = this.rawProcessFactory(processOptions);

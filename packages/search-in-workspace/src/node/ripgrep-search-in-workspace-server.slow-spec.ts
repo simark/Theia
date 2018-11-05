@@ -18,14 +18,15 @@ import * as chai from 'chai';
 const expect = chai.expect;
 import * as temp from 'temp';
 import * as fs from 'fs';
-import { RipgrepSearchInWorkspaceServer } from './ripgrep-search-in-workspace-server';
+import { RipgrepSearchInWorkspaceServer, RgPath } from './ripgrep-search-in-workspace-server';
 import { SearchInWorkspaceClient, SearchInWorkspaceResult } from '../common/search-in-workspace-interface';
-import { Container, ContainerModule } from 'inversify';
+import { Container } from 'inversify';
 import { ILogger, isWindows } from '@theia/core';
 import { MockLogger } from '@theia/core/lib/common/test/mock-logger';
-import { RawProcessFactory, RawProcessOptions, RawProcess, ProcessManager } from '@theia/process/lib/node';
+import { RawProcessFactory, RawProcess, ProcessManager, RawProcessOptions } from '@theia/process/lib/node';
 import * as path from 'path';
 import { FileUri } from '@theia/core/lib/node/file-uri';
+import { rgPath as realRgPath } from 'vscode-ripgrep';
 
 // Allow creating temporary files, but remove them when we are done.
 const track = temp.track();
@@ -113,28 +114,31 @@ If one uses \`salut";\' echo foo && echo bar; "\` as a search term it should not
     createTestFile('lots-of-matches', lotsOfMatchesText);
 });
 
-beforeEach(() => {
+// Create an instance of RipgrepSearchInWorkspaceServer which uses rgPath as
+// the rg binary.
+function createInstance(rgPath: string): RipgrepSearchInWorkspaceServer {
     const container = new Container();
 
-    const module = new ContainerModule(bind => {
-        bind(ILogger).to(MockLogger);
-        bind(RipgrepSearchInWorkspaceServer).toSelf();
-        bind(ProcessManager).toSelf().inSingletonScope();
-        bind(RawProcess).toSelf().inTransientScope();
-        bind(RawProcessFactory).toFactory(ctx =>
-            (options: RawProcessOptions) => {
-                const child = new Container({ defaultScope: 'Singleton' });
-                child.parent = ctx.container;
+    container.bind(ILogger).to(MockLogger);
+    container.bind(RipgrepSearchInWorkspaceServer).toSelf();
+    container.bind(ProcessManager).toSelf().inSingletonScope();
+    container.bind(RawProcess).toSelf().inTransientScope();
+    container.bind(RawProcessFactory).toFactory(ctx =>
+        (options: RawProcessOptions) => {
+            const child = new Container({ defaultScope: 'Singleton' });
+            child.parent = ctx.container;
 
-                child.bind(RawProcessOptions).toConstantValue(options);
-                return child.get(RawProcess);
-            }
-        );
-    });
+            child.bind(RawProcessOptions).toConstantValue(options);
+            return child.get(RawProcess);
+        }
+    );
+    container.bind(RgPath).toConstantValue(rgPath);
 
-    container.load(module);
+    return container.get(RipgrepSearchInWorkspaceServer);
+}
 
-    ripgrepServer = container.get(RipgrepSearchInWorkspaceServer);
+beforeEach(() => {
+    ripgrepServer = createInstance(realRgPath);
 });
 
 after(() => {
@@ -521,5 +525,47 @@ describe('ripgrep-search-in-workspace-server', function () {
         });
         ripgrepServer.setClient(client);
         ripgrepServer.search(pattern, rootDir, { useRegExp: true });
+    });
+
+    it('fails gracefully when rg isn\'t found', async function () {
+        const errorString = await new Promise<string>((resolve, reject) => {
+            const rgServer = createInstance('/non-existent/rg');
+
+            rgServer.setClient({
+                onResult: (searchId: number, result: SearchInWorkspaceResult): void => {
+                    reject();
+                },
+                onDone: (searchId: number, error?: string): void => {
+                    resolve(error);
+                },
+            });
+            rgServer.search('pattern', rootDir);
+        });
+
+        expect(errorString).contains('could not find the ripgrep (rg) binary');
+    });
+
+    it('fails gracefully when rg isn\'t executable', async function () {
+        const errorString = await new Promise<string>((resolve, reject) => {
+            // Create temporary file, ensure it is not executable.
+            const rg = temp.openSync();
+            let mode = fs.fstatSync(rg.fd).mode;
+            mode &= ~(fs.constants.S_IXUSR | fs.constants.S_IXGRP | fs.constants.S_IXOTH);
+            fs.fchmodSync(rg.fd, mode);
+            fs.closeSync(rg.fd);
+            const rgServer = createInstance(rg.path);
+
+            rgServer.setClient({
+                onResult: (searchId: number, result: SearchInWorkspaceResult): void => {
+                    reject();
+                },
+                onDone: (searchId: number, error?: string): void => {
+                    resolve(error);
+                },
+            });
+            rgServer.search('pattern', rootDir);
+        });
+
+        expect(errorString).contains('could not execute the ripgrep (rg) binary');
     });
 });
